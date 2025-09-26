@@ -90,9 +90,19 @@ The webhook endpoint expects POST requests with the following JSON structure:
 
 ## Data Storage
 
-Processed events are stored in ClickHouse with the following additional fields:
-- `id`: Auto-generated unique identifier
-- `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`: Extracted UTM parameters
+Processed events are stored in ClickHouse in the `ProcessedUTM` table with:
+
+**Original webhook fields:**
+- `originalUrl`, `redirectUrl`, `timestamp`, `userAgent`, `path`
+- `utmParams`: JSON object with all UTM parameters
+- `referer`: Optional field (if provided by webhook)
+
+**Additional generated fields:**
+- `id`: Auto-generated unique identifier (format: `utm-{timestamp}-{random}`)
+- `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`: Extracted as separate columns for efficient querying
+
+**Table configuration:**
+- Ordered by `timestamp` for optimal query performance
 
 ## Deployment
 
