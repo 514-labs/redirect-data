@@ -1,10 +1,5 @@
 import { UTMWebhookPipeline, ProcessedUTMPipeline, UTMWebhookEvent, ProcessedUTMEvent } from "./models";
 
-// Add a streaming consumer to conform incoming webhook data to our schema
-UTMWebhookPipeline.stream!.addConsumer((webhookData: any) => {
-  console.log("Raw webhook received:", webhookData);
-});
-
 // Transform raw UTM webhook events to processed events with extracted parameters
 UTMWebhookPipeline.stream!.addTransform(
   ProcessedUTMPipeline.stream!,
@@ -32,14 +27,3 @@ UTMWebhookPipeline.stream!.addTransform(
   }
 );
 
-// Add a streaming consumer to log processed events
-ProcessedUTMPipeline.stream!.addConsumer((event: ProcessedUTMEvent) => {
-  console.log("Processed UTM event:", {
-    id: event.id,
-    path: event.path,
-    source: event.utm_source,
-    medium: event.utm_medium,
-    campaign: event.utm_campaign,
-    totalUtmParams: event.utmParams ? Object.keys(event.utmParams).length : 0
-  });
-});
