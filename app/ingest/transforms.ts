@@ -1,71 +1,43 @@
-import { FooPipeline, BarPipeline, Foo, Bar } from "./models";
-import { DeadLetterQueue, MooseCache } from "@514labs/moose-lib";
+import { UTMWebhookPipeline, ProcessedUTMPipeline, UTMWebhookEvent, ProcessedUTMEvent } from "./models";
 
-// Transform Foo events to Bar events
-FooPipeline.stream!.addTransform(
-  BarPipeline.stream!,
-  async (foo: Foo): Promise<Bar> => {
-    /**
-     * Transform Foo events to Bar events with error handling and caching.
-     * 
-     * Normal flow:
-     * 1. Check cache for previously processed events
-     * 2. Transform Foo to Bar
-     * 3. Cache the result
-     * 4. Return transformed Bar event
-     * 
-     * Alternate flow (DLQ):
-     * - If errors occur during transformation, the event is sent to DLQ
-     * - This enables separate error handling, monitoring, and retry strategies
-    */
+// Add a streaming consumer to conform incoming webhook data to our schema
+UTMWebhookPipeline.stream!.addConsumer((webhookData: any) => {
+  console.log("Raw webhook received:", webhookData);
+});
 
-    // Initialize cache
-    const cache = await MooseCache.get();
-    const cacheKey = `processed:${foo.primaryKey}`;
-
-    // Check if we have processed this event before
-    const cached = await cache.get<Bar>(cacheKey);
-    if (cached) {
-      console.log(`Using cached result for ${foo.primaryKey}`);
-      return cached;
-    }
-
-    if (foo.timestamp === 1728000000.0) {
-      // magic value to test the dead letter queue
-      throw new Error("blah");
-    }
-
-    const result: Bar = {
-      primaryKey: foo.primaryKey,
-      utcTimestamp: new Date(foo.timestamp * 1000), // Convert timestamp to Date
-      hasText: foo.optionalText !== undefined,
-      textLength: foo.optionalText?.length ?? 0,
+// Transform raw UTM webhook events to processed events with extracted parameters
+UTMWebhookPipeline.stream!.addTransform(
+  ProcessedUTMPipeline.stream!,
+  async (rawEvent: UTMWebhookEvent): Promise<ProcessedUTMEvent> => {
+    // Note: rawEvent already conforms to UTMWebhookEvent interface
+    // The IngestPipeline handles the initial data validation
+    
+    const processedEvent: ProcessedUTMEvent = {
+      ...rawEvent, // Spread all fields from the raw event
+      
+      // Extract common UTM parameters (case-insensitive)
+      utm_source: rawEvent.utmParams?.utm_source || rawEvent.utmParams?.UTM_SOURCE,
+      utm_medium: rawEvent.utmParams?.utm_medium || rawEvent.utmParams?.UTM_MEDIUM,
+      utm_campaign: rawEvent.utmParams?.utm_campaign || rawEvent.utmParams?.UTM_CAMPAIGN,
+      utm_term: rawEvent.utmParams?.utm_term || rawEvent.utmParams?.UTM_TERM,
+      utm_content: rawEvent.utmParams?.utm_content || rawEvent.utmParams?.UTM_CONTENT,
     };
-
-    // Cache the result (1 hour retention)
-    await cache.set(cacheKey, result, 3600);
-
-    return result;
+    
+    return processedEvent;
   },
   {
-    deadLetterQueue: FooPipeline.deadLetterQueue,
-  },
+    deadLetterQueue: UTMWebhookPipeline.deadLetterQueue,
+  }
 );
 
-// Add a streaming consumer to print Foo events
-const printFooEvent = (foo: Foo): void => {
-  console.log("Received Foo event:");
-  console.log(`  Primary Key: ${foo.primaryKey}`);
-  console.log(`  Timestamp: ${new Date(foo.timestamp * 1000)}`);
-  console.log(`  Optional Text: ${foo.optionalText ?? "None"}`);
-  console.log("---");
-};
-
-FooPipeline.stream!.addConsumer(printFooEvent);
-
-// DLQ consumer for handling failed events (alternate flow)
-FooPipeline.deadLetterQueue!.addConsumer((deadLetter) => {
-  console.log(deadLetter);
-  const foo: Foo = deadLetter.asTyped();
-  console.log(foo);
+// Add a streaming consumer to log processed events
+ProcessedUTMPipeline.stream!.addConsumer((event: ProcessedUTMEvent) => {
+  console.log("Processed UTM event:", {
+    id: event.id,
+    path: event.path,
+    source: event.utm_source,
+    medium: event.utm_medium,
+    campaign: event.utm_campaign,
+    totalUtmParams: event.utmParams ? Object.keys(event.utmParams).length : 0
+  });
 });

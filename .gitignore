@@ -3,4 +3,8 @@ node_modules
 dist
 coverage
 .ts-node
+.env
+.DS_Store
+.claude
+.vscode
 
