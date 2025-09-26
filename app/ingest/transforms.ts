@@ -14,6 +14,8 @@ UTMWebhookPipeline.stream!.addTransform(
     
     const processedEvent: ProcessedUTMEvent = {
       ...rawEvent, // Spread all fields from the raw event
+      // Generate ID if not provided
+      id: rawEvent.id || `utm-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       
       // Extract common UTM parameters (case-insensitive)
       utm_source: rawEvent.utmParams?.utm_source || rawEvent.utmParams?.UTM_SOURCE,

@@ -1,6 +1,5 @@
 import {
   IngestPipeline,
-  Key,
   OlapTable,
   DeadLetterModel,
   DateTime,
@@ -13,12 +12,12 @@ import {
 
 /** Webhook data from UTM redirect service */
 export interface UTMWebhookEvent {
-  id: Key<string>; // Unique event ID
+  id?: string; // Unique event ID (optional - not sent by service)
   originalUrl: string; // Original URL with UTM parameters
   redirectUrl: string; // Target redirect URL
   timestamp: DateTime; // Event timestamp
   userAgent: string; // User's browser agent
-  referer: string; // Referer URL (HTTP standard spelling)
+  referer?: string; // Referer URL (optional - not sent by service)
   utmParams: Record<string, any>; // Dynamic JSON for variable UTM parameters
   path: string; // URL path that was accessed
 }
@@ -50,7 +49,9 @@ export const UTMWebhookPipeline = new IngestPipeline<UTMWebhookEvent>("UTMWebhoo
 
 /** Processed UTM events pipeline */
 export const ProcessedUTMPipeline = new IngestPipeline<ProcessedUTMEvent>("ProcessedUTM", {
-  table: true, // Store in ClickHouse table "ProcessedUTM"
+  table: {
+    orderByFields: ["timestamp"], // Order events by timestamp
+  },
   stream: true, // Enable streaming for further processing
   ingest: false, // No direct API, only via transformation
 });
