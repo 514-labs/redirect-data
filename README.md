@@ -22,7 +22,7 @@ app/
 ├── ingest/
 │   ├── models.ts      # Data models for UTM webhook events
 │   └── transforms.ts  # Data transformation logic
-└── index.ts          # Main application entry point
+└── index.ts           # Main application entry point
 ```
 
 ## Data Flow
