@@ -53,3 +53,9 @@ postgresql_version = "13"
 streaming_engine = true
 workflows = true
 data_model_v2 = true
+
+[jwt]
+# JWT configuration for API authentication
+# The secret will be loaded from MOOSE_JWT_SECRET environment variable
+# issuer = "https://my-auth-server.com/"
+# audience = "test-utm-moose-app"
