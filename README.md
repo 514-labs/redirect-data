@@ -51,7 +51,9 @@ cd redirect-data
 npm install
 ```
 
-3. Start the development server:
+3. Configure authentication (see Authentication section below)
+
+4. Start the development server:
 ```bash
 moose dev
 ```
@@ -68,6 +70,43 @@ ngrok http 4000
 ```
 
 2. Configure the UTM service at [utm.fiveonefour.dev/admin](https://utm.fiveonefour.dev/admin) to use your ngrok URL as the analytics endpoint.
+
+## Authentication
+
+This service requires bearer token authentication for security. The UTM tracker prototype must include an `Authorization: Bearer <token>` header when sending webhook data.
+
+### Setup
+
+1. Copy the `.env.example` file to `.env`:
+```bash
+cp .env.example .env
+```
+
+2. Generate a hashed API key using the Moose CLI:
+```bash
+moose generate hash-token
+```
+
+3. Set the generated hash in your `.env` file:
+```bash
+MOOSE_INGEST_API_KEY=your_generated_hash_here
+```
+
+4. Configure the UTM tracker prototype to send the same token (before hashing) in the `Authorization` header:
+```bash
+# In the utm-tracker-prototype .env file:
+ANALYTICS_BEARER_TOKEN=your-plain-token-here
+```
+
+### How It Works
+
+- The UTM tracker sends: `Authorization: Bearer your-plain-token-here`
+- Moose verifies this against the hashed version in `MOOSE_INGEST_API_KEY`
+- Requests without valid authentication are rejected with a 401 error
+
+### Alternative: JWT Authentication
+
+For more advanced use cases, you can use JWT tokens with RSA signatures. See the [Moose authentication docs](https://docs.fiveonefour.com/moose/apis/auth) for setup instructions.
 
 ## Webhook Data Format
 
